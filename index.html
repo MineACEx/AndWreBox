@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AndWreBox — Android Root Toolbox</title>
+<style>
+/* ═══════════ CSS Variables ═══════════ */
+:root {
+  --bg: #0a0a0f; --bg2: #12121a; --bg3: #1e1e2a; --ink: #f0f0f5;
+  --muted: #999; --rule: rgba(255,255,255,0.08);
+  --glass-bg: rgba(18,18,26,0.35); --glass-border: rgba(255,255,255,0.06);
+  --glass-blur: blur(28px);
+  --accent: #6c5ce7; --accent2: #a29bfe; --accent3: #fd79a8;
+  --accent-glow: rgba(108,92,231,0.35);
+  --card-hover-glow: 0 0 40px rgba(108,92,231,0.25);
+  --radius: 18px; --radius-sm: 12px;
+  --e-out: cubic-bezier(0.16,1,0.3,1); --e-spring: cubic-bezier(0.34,1.56,0.64,1);
+  --e-bounce: cubic-bezier(0.68,-0.55,0.27,1.55);
+}
+[data-theme="light"] {
+  --bg: #f5f5f9; --bg2: #eeeef5; --bg3: #dddde8; --ink: #1a1a2e;
+  --muted: #666; --rule: rgba(0,0,0,0.06);
+  --glass-bg: rgba(255,255,255,0.35); --glass-border: rgba(0,0,0,0.06);
+  --card-hover-glow: 0 0 40px rgba(108,92,231,0.15);
+}
+
+/* ═══════════ Reset ═══════════ */
+*,*::before,*::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;
+  background: var(--bg); color: var(--ink); min-height: 100vh;
+  overflow-x: hidden; transition: background 0.5s, color 0.5s;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════ Star Canvas ═══════════ */
+#starCanvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; will-change: transform; }
+
+/* ═══════════ Floating Orbs ═══════════ */
+.floating-orb {
+  position: fixed; border-radius: 50%; z-index: 0; pointer-events: none;
+  filter: blur(100px); opacity: 0.07;
+}
+.orb-1 { width: 400px; height: 400px; background: var(--accent); top: -100px; left: -100px; animation: orbFloat1 14s ease-in-out infinite; }
+.orb-2 { width: 350px; height: 350px; background: var(--accent2); bottom: -100px; right: -100px; animation: orbFloat2 16s ease-in-out infinite; }
+.orb-3 { width: 250px; height: 250px; background: var(--accent3); top: 40%; left: 60%; animation: orbFloat3 18s ease-in-out infinite; }
+.orb-4 { width: 200px; height: 200px; background: var(--accent); top: 20%; right: 20%; animation: orbFloat4 15s ease-in-out infinite; }
+.orb-5 { width: 300px; height: 300px; background: var(--accent2); bottom: 30%; left: 20%; animation: orbFloat5 17s ease-in-out infinite; }
+@keyframes orbFloat1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,-30px) scale(1.1); } }
+@keyframes orbFloat2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,40px) scale(1.15); } }
+@keyframes orbFloat3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-20px,-20px) scale(1.08); } }
+@keyframes orbFloat4 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,20px) scale(1.12); } }
+@keyframes orbFloat5 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-25px,-25px) scale(1.1); } }
+
+/* ═══════════ Cursor Glow ═══════════ */
+.cursor-glow {
+  position: fixed; pointer-events: none; z-index: 1;
+  width: 300px; height: 300px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  transform: translate(-50%,-50%); opacity: 0; transition: opacity 0.4s;
+}
+.cursor-glow.active { opacity: 0.5; }
+
+/* ═══════════ Aurora Borealis ═══════════ */
+.aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.aurora-band {
+  position: absolute; width: 150%; height: 50%; left: -25%;
+  background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, var(--accent) 60deg, var(--accent2) 150deg, transparent 180deg, var(--accent3) 240deg, var(--accent) 300deg, transparent 360deg);
+  filter: blur(120px); opacity: 0.06;
+}
+.aurora-band:first-child { top: 10%; animation: auroraSpin 40s linear infinite; }
+.aurora-band:last-child { bottom: 5%; animation: auroraSpin 35s linear infinite reverse; }
+@keyframes auroraSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* ═══════════ Loading ═══════════ */
+#loading {
+  position: fixed; inset: 0; z-index: 9999; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: opacity 0.8s var(--e-out), visibility 0.8s;
+}
+#loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loading-core {
+  position: relative; width: 90px; height: 90px;
+}
+.loading-outer {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2.5px solid transparent;
+  border-top-color: var(--accent);
+  animation: loadSpinOuter 1.4s linear infinite;
+}
+.loading-inner {
+  position: absolute; inset: 8px; border-radius: 50%;
+  border: 2px solid transparent;
+  border-bottom-color: var(--accent2);
+  animation: loadSpinInner 1s linear infinite reverse;
+}
+.loading-ring-glow {
+  position: absolute; inset: -4px; border-radius: 50%;
+  box-shadow: 0 0 30px var(--accent-glow), 0 0 60px var(--accent-glow);
+  animation: loadGlow 1.5s ease-in-out infinite;
+}
+@keyframes loadSpinOuter { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes loadSpinInner { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+@keyframes loadGlow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+.loading-logo {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; font-weight: 800; color: var(--accent); letter-spacing: 0.04em;
+  animation: loadLogoPop 0.6s var(--e-spring) 0.4s both;
+}
+@keyframes loadLogoPop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.loading-text {
+  margin-top: 1.8rem; font-size: 1.3rem; font-weight: 700; color: var(--ink);
+  letter-spacing: 0.08em; animation: loadTextIn 0.7s var(--e-spring) 0.6s both;
+}
+@keyframes loadTextIn {
+  0% { opacity: 0; transform: translateY(15px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.loading-bar-wrap {
+  width: 180px; height: 3px; margin-top: 1.5rem; border-radius: 2px;
+  background: var(--bg3); overflow: hidden;
+  animation: loadBarIn 0.5s var(--e-out) 0.8s both;
+}
+@keyframes loadBarIn {
+  0% { opacity: 0; transform: scaleX(0); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+.loading-bar-fill {
+  height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  background-size: 200% 100%;
+  animation: loadBarProgress 1.8s var(--e-out) 0.9s forwards, loadBarShimmer 1.5s linear infinite;
+  width: 0;
+}
+@keyframes loadBarProgress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+@keyframes loadBarShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ═══════════ Scroll Progress ═══════════ */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; height: 2.5px; z-index: 1000; pointer-events: none;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  background-size: 200% 100%; animation: progressShimmer 2s linear infinite;
+}
+@keyframes progressShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ═══════════ Main Container ═══════════ */
+main {
+  position: relative; z-index: 1; max-width: 1100px; margin: 0 auto;
+  padding: 0 1.5rem 1.5rem;
+}
+
+/* ═══════════ Hero ═══════════ */
+.hero {
+  position: relative; z-index: 1; min-height: auto; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 6rem 2rem 3rem;
+}
+.hero-grid-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle, var(--rule) 1px, transparent 1px);
+  background-size: 40px 40px; opacity: 0.5;
+}
+.hero-badge {
+  display: inline-block; padding: 6px 18px; border-radius: 40px;
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); font-size: 0.85rem;
+  color: var(--accent); font-weight: 600; margin-bottom: 1.5rem;
+  animation: heroBadgeIn 0.8s var(--e-spring) 0.05s both;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+@keyframes heroBadgeIn {
+  0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hero-title {
+  font-size: clamp(2.8rem, 7vw, 5rem); font-weight: 700; color: var(--ink);
+  letter-spacing: -0.03em; animation: heroTitleIn 1.2s var(--e-spring) 0.1s both;
+}
+@keyframes heroTitleIn {
+  0% { opacity: 0; transform: translateY(30px); filter: blur(8px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.hero-subtitle {
+  font-size: 1.2rem; color: var(--muted); max-width: 600px; line-height: 1.6;
+  margin-bottom: 2rem; animation: fadeInUp 1s var(--e-spring) 0.4s both;
+}
+.hero .btn { animation: fadeInUp 0.8s var(--e-spring) 0.6s both; }
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════ Button ═══════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 14px 32px;
+  border-radius: var(--radius); font-size: 0.95rem; font-weight: 700; text-decoration: none;
+  border: none; cursor: pointer; position: relative; overflow: hidden;
+  transition: all 0.35s var(--e-spring);
+}
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 20px var(--accent-glow); }
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 32px var(--accent-glow); }
+.btn-secondary { background: var(--glass-bg); border: 1.5px solid var(--rule); color: var(--ink); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
+.btn-secondary:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+/* ═══════════ Tab Navigation ═══════════ */
+.tab-nav {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  padding: 8px 4px; position: sticky; top: 10px; z-index: 100;
+  max-width: 900px; margin: 0 auto 2rem;
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: 50px;
+  transition: all 0.4s;
+}
+.tab-btn {
+  padding: 10px 12px; border: none; background: transparent; color: var(--muted);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 40px;
+  transition: all 0.4s var(--e-spring); white-space: nowrap; position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab-btn::after {
+  content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%) scaleX(0);
+  width: 50%; height: 2.5px; border-radius: 2px;
+  background: var(--accent);
+  transition: transform 0.4s var(--e-spring);
+}
+.tab-btn:hover { color: var(--ink); transform: scale(1.04); }
+.tab-btn:hover::after { transform: translateX(-50%) scaleX(0.6); }
+.tab-btn.active { color: var(--accent); transform: scale(1.08); font-weight: 700; }
+.tab-btn.active::after { transform: translateX(-50%) scaleX(1); background: var(--accent); }
+
+/* ═══════════ Section ═══════════ */
+.section { padding: 4rem 0; scroll-margin-top: 80px; display: none; }
+.section.visible { display: block; }
+.section-title {
+  font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; text-align: center;
+}
+.section-desc { text-align: center; color: var(--muted); margin-bottom: 3rem; font-size: 1rem; }
+
+/* ═══════════ Feature Cards ═══════════ */
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 360px)); gap: 1.5rem; }
+.feature-card {
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius);
+  padding: 1.8rem; transition: transform 0.4s var(--e-spring), border-color 0.4s, box-shadow 0.4s;
+  position: relative; overflow: hidden; cursor: default;
+  will-change: transform; contain: layout style paint;
+}
+.feature-card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 0 35px var(--accent-glow), 0 0 80px rgba(108,92,231,0.12); }
+.feature-card .card-num { font-size: 0.75rem; color: var(--accent); font-weight: 700; margin-bottom: 0.5rem; opacity: 0.8; letter-spacing: 0.06em; }
+.feature-card .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; }
+.feature-card .card-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+.card-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem;
+  font-weight: 600; margin-left: 0.5rem;
+}
+.card-badge.beta { background: rgba(253,121,168,0.15); color: #fd79a8; animation: betaPulse 2s ease-in-out infinite; }
+.card-badge.new { background: rgba(108,92,231,0.15); color: var(--accent); }
+@keyframes betaPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(253,121,168,0.3); } 50% { box-shadow: 0 0 0 6px rgba(253,121,168,0); } }
+/* card-sweep removed — caused red mask overlay on mobile */
+
+/* ═══════════ Download Cards ═══════════ */
+.download-section { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 340px)); gap: 1.5rem; }
+.download-card {
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius);
+  padding: 2rem; text-align: center; transition: transform 0.4s var(--e-spring), border-color 0.4s, box-shadow 0.4s;
+  position: relative; overflow: hidden; cursor: default;
+  will-change: transform; contain: layout style paint;
+  animation: slideUp 0.6s var(--e-spring) both;
+}
+.download-card:nth-child(2) { animation-delay: 0.12s; }
+.download-card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 0 35px var(--accent-glow), 0 0 80px rgba(108,92,231,0.12); }
+.download-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
+.download-card h3 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+.download-card .file-info { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+.download-card .flag {
+  position: absolute; top: 20px; right: -30px; background: var(--accent); color: #fff;
+  padding: 4px 36px; font-size: 0.7rem; font-weight: 700; transform: rotate(45deg);
+  animation: floatSlow 3s ease-in-out infinite;
+}
+.dl-arrow { display: inline-block; transition: transform 0.3s var(--e-spring); }
+.download-card:hover .dl-arrow { transform: translateY(4px); }
+@keyframes slideUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
+@keyframes floatSlow { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* ═══════════ Download Groups ═══════════ */
+.dl-group { margin-bottom: 2.5rem; }
+.dl-group-header {
+  display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem;
+  padding: 0 0.5rem;
+}
+.dl-group-icon { font-size: 2rem; flex-shrink: 0; }
+.dl-group-title { font-size: 1.15rem; font-weight: 700; color: var(--ink); margin-bottom: 0.15rem; }
+.dl-group-sub { font-size: 0.82rem; color: var(--muted); }
+.dl-source {
+  max-width: 360px; margin: 0 auto; text-align: center;
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius);
+  padding: 2rem;
+}
+
+/* ═══════════ Install Steps ═══════════ */
+.install-steps { max-width: 800px; margin: 0 auto; }
+.step { display: flex; gap: 1.5rem; margin-bottom: 2rem; align-items: flex-start; animation: slideUp 0.6s var(--e-spring) both; }
+.step:nth-child(1) { animation-delay: 0s; }
+.step:nth-child(2) { animation-delay: 0.1s; }
+.step:nth-child(3) { animation-delay: 0.2s; }
+.step:nth-child(4) { animation-delay: 0.3s; }
+.step:nth-child(5) { animation-delay: 0.4s; }
+.step-number {
+  flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%;
+  background: var(--accent); color: #fff; display: flex; align-items: center;
+  justify-content: center; font-weight: 800; font-size: 1.1rem;
+  position: relative; box-shadow: 0 0 20px var(--accent-glow);
+}
+.step-number::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid var(--accent); opacity: 0.3;
+  animation: rippleOut 2s ease-out infinite;
+}
+@keyframes rippleOut { 0% { box-shadow: 0 0 0 0 var(--accent-glow); } 100% { box-shadow: 0 0 0 20px transparent; } }
+.step-content { flex: 1; }
+.step-content h3 { font-size: 1.1rem; margin-bottom: 0.4rem; }
+.step-content p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+.code-block {
+  background: var(--bg2); border: 1px solid var(--rule); border-radius: var(--radius-sm);
+  padding: 1rem 1.5rem; font-family: 'SF Mono','Menlo','Consolas',monospace;
+  font-size: 0.82rem; color: var(--accent2); margin: 0.8rem 0; overflow-x: auto;
+  position: relative;
+}
+
+/* ═══════════ Changelog ═══════════ */
+.changelog-list { max-width: 800px; margin: 0 auto; }
+.changelog-version {
+  font-size: 1.3rem; font-weight: 700; color: var(--accent); margin: 2rem 0 1rem;
+  padding-bottom: 0.5rem; border-bottom: 1px solid var(--rule);
+}
+.changelog-item {
+  padding: 0.8rem 0; font-size: 0.93rem; color: var(--muted); line-height: 1.6;
+  border-bottom: 1px solid var(--rule); transition: all 0.3s var(--e-out);
+  animation: slideUp 0.5s var(--e-spring) both;
+}
+.changelog-item:hover { transform: translateX(8px); color: var(--ink); }
+.changelog-item strong { color: var(--ink); }
+
+/* ═══════════ About Cards ═══════════ */
+.about-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 340px)); gap: 1.5rem; }
+.about-card {
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius);
+  padding: 2rem; text-align: center; transition: transform 0.4s var(--e-spring), border-color 0.4s, box-shadow 0.4s;
+  position: relative; overflow: hidden; cursor: default;
+  will-change: transform; contain: layout style paint;
+  animation: fadeInScale 0.5s var(--e-spring) both;
+}
+.about-card:nth-child(2) { animation-delay: 0.15s; }
+.about-card:nth-child(3) { animation-delay: 0.3s; }
+.about-card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 0 35px var(--accent-glow), 0 0 80px rgba(108,92,231,0.12); }
+@keyframes fadeInScale { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+.about-card-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
+.about-card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.about-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+.about-table { width: 100%; max-width: 800px; margin: 2rem auto; border-collapse: collapse; }
+.about-table td { padding: 0.8rem 1rem; font-size: 0.9rem; border-bottom: 1px solid var(--rule); }
+.about-table td:first-child { font-weight: 600; color: var(--accent); white-space: nowrap; }
+.about-table td:last-child { color: var(--muted); }
+
+/* ═══════════ Settings ═══════════ */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 360px)); gap: 1.5rem; }
+.setting-card {
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius);
+  padding: 1.5rem; transition: all 0.4s var(--e-spring);
+  animation: fadeInScale 0.5s var(--e-spring) both;
+}
+.setting-card:nth-child(1) { animation-delay: 0s; }
+.setting-card:nth-child(2) { animation-delay: 0.08s; }
+.setting-card:nth-child(3) { animation-delay: 0.16s; }
+.setting-card:nth-child(4) { animation-delay: 0.24s; }
+.setting-card:nth-child(5) { animation-delay: 0.32s; }
+.setting-card:nth-child(6) { animation-delay: 0.40s; }
+.setting-card:hover { border-color: var(--accent); }
+.setting-card h3 { font-size: 1rem; margin-bottom: 1rem; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.toggle-switch { position: relative; width: 52px; height: 28px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; border-radius: 28px; cursor: pointer;
+  background: var(--bg3); transition: all 0.4s var(--e-spring);
+}
+.toggle-track::after {
+  content: ''; position: absolute; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; top: 3px; left: 3px; transition: all 0.4s var(--e-spring);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(24px); }
+.color-swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.color-swatch {
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 3px solid transparent;
+  transition: all 0.3s var(--e-spring); position: relative;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.active { border-color: var(--ink); box-shadow: 0 0 16px var(--accent-glow); }
+.corner-tiers { display: flex; gap: 8px; }
+.corner-tier {
+  padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer;
+  border: 1.5px solid var(--rule); background: transparent; color: var(--muted);
+  font-size: 0.85rem; font-weight: 600; transition: all 0.3s var(--e-spring);
+}
+.corner-tier:hover { border-color: var(--accent); color: var(--ink); }
+.corner-tier.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.range-slider {
+  width: 100%; -webkit-appearance: none; height: 6px; border-radius: 3px;
+  background: var(--bg3); outline: none;
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; box-shadow: 0 2px 8px var(--accent-glow);
+}
+.config-actions { display: flex; gap: 10px; margin-top: 1rem; flex-wrap: wrap; }
+.config-btn {
+  padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 0.82rem; font-weight: 600; border: 1.5px solid var(--accent);
+  background: transparent; color: var(--accent); transition: all 0.3s var(--e-spring);
+}
+.config-btn:hover { background: var(--accent); color: #fff; }
+.config-status { font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; }
+
+/* ═══════════ Footer ═══════════ */
+.site-footer { text-align: center; padding: 2rem 1.5rem 1.5rem; color: var(--muted); font-size: 0.85rem; position: relative; z-index: 55; }
+.site-footer p { margin: 0.5rem 0; }
+.perm-notice {
+  display: inline-block; padding: 10px 24px; border-radius: 40px;
+  background: rgba(253,121,168,0.10); color: #fd79a8; font-size: 0.78rem; font-weight: 600;
+  margin: 1rem 0; animation: permPulse 3s ease-in-out infinite;
+}
+@keyframes permPulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+/* ═══════════ Bottom Blur Gradient ═══════════ */
+.bottom-blur {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 80px; z-index: 2; pointer-events: none;
+  background: linear-gradient(to top, var(--bg), transparent);
+}
+
+/* ═══════════ Responsive ═══════════ */
+@media (max-width: 768px) {
+  .download-section, .about-grid, .settings-grid { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .section { padding: 3rem 1.25rem; scroll-margin-top: 56px; }
+  .hero-title { font-size: 2.4rem; }
+  .tab-nav { padding: 0.5rem 0.6rem; gap: 4px; max-width: 100%; }
+  .tab-btn { padding: 8px 4px; font-size: 0.72rem; border-radius: 40px; }
+  .hero { min-height: auto; }
+  .floating-orb { display: none; }
+  .dl-group-header { padding: 0; }
+  .dl-group-title { font-size: 1rem; }
+}
+@media (max-width: 480px) {
+  .hero { padding: 1.5rem; min-height: auto; }
+  .btn { padding: 14px 28px; font-size: 0.95rem; }
+  .section-title { font-size: 1.8rem; }
+  .tab-nav { padding: 0.4rem 0.4rem; gap: 3px; }
+  .tab-btn { padding: 7px 3px; font-size: 0.66rem; border-radius: 36px; }
+}
+@media print { #loading, #starCanvas, .tab-nav, .floating-orb { display: none; } body { background: #fff; color: #000; } .feature-card, .download-card, .about-card, .setting-card { backdrop-filter: none; -webkit-backdrop-filter: none; background: #fff; border: 1px solid #ccc; } }
+
+/* ═══════════ Scrollbar ═══════════ */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--accent), var(--accent2)); border-radius: 5px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--accent2), var(--accent)); }
+::-webkit-scrollbar-thumb:active { background: var(--accent); }
+
+/* ═══════════ Selection ═══════════ */
+::selection { background: var(--accent); color: #fff; }
+
+/* ═══════════ About Table Row Hover ═══════════ */
+.about-table tr { transition: background 0.3s; }
+.about-table tr:hover { background: var(--glass-bg); }
+
+/* ═══════════ G2 Squircle — Dynamic Corner Radius ═══════════ */
+/* Cards use border-radius: var(--radius) which is controlled by the corner tier setting.
+   Tier 0 (Small): 8px / 5px  |  Tier 1 (Medium): 18px / 12px  |  Tier 2 (Large): 32px / 20px
+   These values produce a smooth, Apple-style continuous curvature appearance. */
+
+/* ═══════════ Animation Level Control ═══════════ */
+[data-anim="mid"] .floating-orb { animation-duration: 30s; }
+[data-anim="mid"] .aurora-band { animation-duration: 80s; }
+[data-anim="mid"] .card-badge.beta { animation: none; }
+[data-anim="mid"] .perm-notice { animation: none; }
+[data-anim="mid"] .step-number::after { animation: none; }
+[data-anim="low"] .floating-orb { display: none; }
+[data-anim="low"] .aurora-band { display: none; }
+[data-anim="low"] .cursor-glow { display: none; }
+[data-anim="low"] .card-badge.beta { animation: none; }
+[data-anim="low"] .perm-notice { animation: none; }
+[data-anim="low"] .step-number::after { animation: none; }
+[data-anim="low"] .scroll-progress { display: none; }
+[data-anim="low"] .bottom-blur { display: none; }
+[data-anim="low"] .hero-grid-bg { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Floating Orbs -->
+<div class="floating-orb orb-1"></div>
+<div class="floating-orb orb-2"></div>
+<div class="floating-orb orb-3"></div>
+<div class="floating-orb orb-4"></div>
+<div class="floating-orb orb-5"></div>
+
+<!-- Cursor Glow -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- Aurora Borealis -->
+<div class="aurora">
+  <div class="aurora-band"></div>
+  <div class="aurora-band"></div>
+</div>
+
+<!-- Star Canvas -->
+<canvas id="starCanvas"></canvas>
+
+<!-- Scroll Progress -->
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<!-- Bottom Blur -->
+<div class="bottom-blur"></div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="loading-core">
+    <div class="loading-outer"></div>
+    <div class="loading-inner"></div>
+    <div class="loading-ring-glow"></div>
+    <div class="loading-logo">AB</div>
+  </div>
+  <div class="loading-text">AndWreBox</div>
+  <div class="loading-bar-wrap"><div class="loading-bar-fill"></div></div>
+</div>
+
+<!-- Main Content -->
+<main id="mainContent" style="visibility:hidden;">
+
+<!-- Hero -->
+<header class="hero" id="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-badge" data-i18n="hero_badge">🔧 安卓扳手盒子</div>
+  <h1 class="hero-title" data-i18n="hero_title">AndWreBox</h1>
+  <p class="hero-subtitle" data-i18n="hero_subtitle">专为 Android Root 用户打造的全能工具箱<br>15大模块，一键优化你的设备</p>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;position:relative;z-index:1;">
+    <a href="#downloads" class="btn btn-primary" data-i18n="hero_dl">⬇️ 立即下载</a>
+    <a href="#features" class="btn btn-secondary" data-i18n="hero_learn">📖 了解更多</a>
+  </div>
+</header>
+
+<!-- Tab Navigation -->
+<nav class="tab-nav" id="tabNav">
+  <button class="tab-btn active" data-tab="features"><span data-i18n="tab_features">⚡ 功能特性</span></button>
+  <button class="tab-btn" data-tab="install"><span data-i18n="tab_install">📦 安装教程</span></button>
+  <button class="tab-btn" data-tab="downloads"><span data-i18n="tab_downloads">⬇️ 下载页面</span></button>
+  <button class="tab-btn" data-tab="changelog"><span data-i18n="tab_changelog">📝 更新日志</span></button>
+  <button class="tab-btn" data-tab="about"><span data-i18n="tab_about">ℹ️ 关于</span></button>
+  <button class="tab-btn" data-tab="settings"><span data-i18n="tab_settings">⚙️ 设置</span></button>
+</nav>
+
+<!-- Features -->
+<section class="section visible" id="features">
+  <h2 class="section-title" data-i18n="features_title">⚡ 功能特性</h2>
+  <p class="section-desc" data-i18n="features_desc">15 大模块，覆盖 Android Root 工具全场景</p>
+  <div class="feature-grid">
+    <div class="feature-card"><div class="card-num">01</div><div class="card-title" data-i18n="feat_1_title">系统微调</div><div class="card-desc" data-i18n="feat_1_desc">调整 CPU 调度、GPU 频率、I/O 调度器。支持一键性能模式、省电模式、游戏模式预设。</div></div>
+    <div class="feature-card"><div class="card-num">02</div><div class="card-title" data-i18n="feat_2_title">温控调节 <span class="card-badge new">NEW</span></div><div class="card-desc" data-i18n="feat_2_desc">自定义温控阈值，解除温控限制。支持逐场景配置（充电/游戏/日常），安全区间保护。</div></div>
+    <div class="feature-card"><div class="card-num">03</div><div class="card-title" data-i18n="feat_3_title">AnyKernel3 刷写 <span class="card-badge beta">BETA</span></div><div class="card-desc" data-i18n="feat_3_desc">内置答题验证系统，通过后解锁刷写界面。支持自动备份 boot.img，安全刷入自定义内核。</div></div>
+    <div class="feature-card"><div class="card-num">04</div><div class="card-title" data-i18n="feat_4_title">Magisk 模块构建</div><div class="card-desc" data-i18n="feat_4_desc">一键生成改机型模块，预设 36 款热门机型。支持自定义模块名称、版本号、作者信息。</div></div>
+    <div class="feature-card"><div class="card-num">05</div><div class="card-title" data-i18n="feat_5_title">电池健康监测</div><div class="card-desc" data-i18n="feat_5_desc">实时读取电池循环次数、健康度、温度。支持充电上限设置，延长电池寿命。</div></div>
+    <div class="feature-card"><div class="card-num">06</div><div class="card-title" data-i18n="feat_6_title">GPU 优化</div><div class="card-desc" data-i18n="feat_6_desc">调整 GPU 最低/最高频率，锁定渲染帧率。支持 Adreno 全系列，含降压超频选项。</div></div>
+    <div class="feature-card"><div class="card-num">07</div><div class="card-title" data-i18n="feat_7_title">网络优化</div><div class="card-desc" data-i18n="feat_7_desc">调整 TCP 拥塞算法、DNS 配置、MTU 参数。降低游戏延迟，提升下载速度。</div></div>
+    <div class="feature-card"><div class="card-num">08</div><div class="card-title" data-i18n="feat_8_title">显示调节</div><div class="card-desc" data-i18n="feat_8_desc">调整 DPI、分辨率、刷新率、色温。支持自定义分辨率和 HDR 强制开启。</div></div>
+    <div class="feature-card"><div class="card-num">09</div><div class="card-title" data-i18n="feat_9_title">ZRAM / SWAP 管理</div><div class="card-desc" data-i18n="feat_9_desc">调整 ZRAM 大小和压缩算法（lz4/zstd）。优化内存使用，减少杀后台概率。</div></div>
+    <div class="feature-card"><div class="card-num">10</div><div class="card-title" data-i18n="feat_10_title">熵池增强</div><div class="card-desc" data-i18n="feat_10_desc">增大随机数熵池，提升系统响应速度和随机性。对加解密操作有明显加速效果。</div></div>
+    <div class="feature-card"><div class="card-num">11</div><div class="card-title" data-i18n="feat_11_title">Prop 编辑器</div><div class="card-desc" data-i18n="feat_11_desc">可视化编辑 build.prop 和系统属性。内置常用优化项预设，一键恢复默认值。</div></div>
+    <div class="feature-card"><div class="card-num">12</div><div class="card-title" data-i18n="feat_12_title">实时监控</div><div class="card-desc" data-i18n="feat_12_desc">显示 CPU/GPU 频率、温度、帧率、电池功耗。悬浮窗模式，游戏中实时查看。</div></div>
+    <div class="feature-card"><div class="card-num">13</div><div class="card-title" data-i18n="feat_13_title">文件加密</div><div class="card-desc" data-i18n="feat_13_desc">AES-256 加密任意文件/文件夹。支持密码和解锁图案两种方式，加密后自动隐藏。</div></div>
+    <div class="feature-card"><div class="card-num">14</div><div class="card-title" data-i18n="feat_14_title">应用管理</div><div class="card-desc" data-i18n="feat_14_desc">批量冻结/解冻系统应用，禁用/启用组件。支持导出应用列表，一键恢复预设配置。</div></div>
+    <div class="feature-card"><div class="card-num">15</div><div class="card-title" data-i18n="feat_15_title">备份还原</div><div class="card-desc" data-i18n="feat_15_desc">备份和还原系统分区、应用数据、内核镜像。支持 TWRP / Orangefox 兼容格式。</div></div>
+  </div>
+</section>
+
+<!-- Install -->
+<section class="section" id="install" style="display:none;">
+  <h2 class="section-title" data-i18n="install_title">📦 安装教程</h2>
+  <p class="section-desc" data-i18n="install_desc">两种方式，任选其一</p>
+  <div class="install-steps">
+    <div class="step">
+      <div class="step-number">A</div>
+      <div class="step-content">
+        <h3 data-i18n="install_termux_title">方式一：Termux 安装</h3>
+        <p data-i18n="install_termux_desc">适用于已安装 Termux 的用户</p>
+        <div class="code-block">pkg update && pkg install python -y<br>cd /sdcard/AndWreBox<br>python main.py</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">B</div>
+      <div class="step-content">
+        <h3 data-i18n="install_module_title">方式二：Python3 模块安装</h3>
+        <p data-i18n="install_module_desc">刷入模块后无需 Termux 即可运行</p>
+        <div class="code-block"># 1. 下载 Python3Install.zip 并在 Magisk/KernelSU 中刷入<br># 2. 重启设备<br># 3. 执行以下命令<br>cd /sdcard/AndWreBox<br>python3 main.py</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h3 data-i18n="install_step1_title">下载并解压</h3>
+        <p data-i18n="install_step1_desc">从下载页面获取最新版本，将 AndWreBox 文件夹解压到 /sdcard/AndWreBox/</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h3 data-i18n="install_step2_title">安装 Python 环境</h3>
+        <p data-i18n="install_step2_desc">选择上述方式一或方式二安装 Python 运行环境</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h3 data-i18n="install_step3_title">运行脚本</h3>
+        <p data-i18n="install_step3_desc">进入 AndWreBox 目录，执行 python main.py（或 python3 main.py），根据菜单选择功能</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Downloads -->
+<section class="section" id="downloads" style="display:none;">
+  <h2 class="section-title" data-i18n="downloads_title">⬇️ 下载页面</h2>
+  <p class="section-desc" data-i18n="downloads_desc">选择你需要的版本</p>
+
+  <div class="dl-group">
+    <div class="dl-group-header">
+      <span class="dl-group-icon">🇨🇳</span>
+      <div>
+        <h3 class="dl-group-title" data-i18n="dl_cn_title">国内用户首选</h3>
+        <p class="dl-group-sub" data-i18n="dl_cn_sub">CatMak 加速镜像 · 高速下载</p>
+      </div>
+    </div>
+    <div class="download-section">
+      <div class="download-card">
+        <div class="flag">LATEST</div>
+        <span class="download-icon">📦</span>
+        <h3>AndWreBox v1.0.0</h3>
+        <div class="file-info" data-i18n="dl_main_info">主程序包 · arm64 · 约 135 KB</div>
+        <a href="https://gh.catmak.name/https://github.com/MineACEx/AndWreBox/releases/download/v1.0.0/AndWreBox-v1.0.0-arm64.zip" class="btn btn-primary" target="_blank" rel="noopener">下载 <span class="dl-arrow">↓</span></a>
+      </div>
+      <div class="download-card">
+        <span class="download-icon">🐍</span>
+        <h3>Python3Install</h3>
+        <div class="file-info" data-i18n="dl_py_info">Magisk/KernelSU 模块 · 约 1.7 MB</div>
+        <a href="https://gh.catmak.name/https://github.com/MineACEx/AndWreBox/releases/download/v1.0.0/Python3Install.zip" class="btn btn-primary" target="_blank" rel="noopener">下载 <span class="dl-arrow">↓</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="dl-group">
+    <div class="dl-group-header">
+      <span class="dl-group-icon">🌍</span>
+      <div>
+        <h3 class="dl-group-title" data-i18n="dl_intl_title">国外用户首选</h3>
+        <p class="dl-group-sub" data-i18n="dl_intl_sub">GitHub Releases · 直连下载</p>
+      </div>
+    </div>
+    <div class="download-section">
+      <div class="download-card">
+        <span class="download-icon">📦</span>
+        <h3>AndWreBox v1.0.0</h3>
+        <div class="file-info" data-i18n="dl_main_info">主程序包 · arm64 · 约 135 KB</div>
+        <a href="https://github.com/MineACEx/AndWreBox/releases/download/v1.0.0/AndWreBox-v1.0.0-arm64.zip" class="btn btn-primary" target="_blank" rel="noopener">下载 <span class="dl-arrow">↓</span></a>
+      </div>
+      <div class="download-card">
+        <span class="download-icon">🐍</span>
+        <h3>Python3Install</h3>
+        <div class="file-info" data-i18n="dl_py_info">Magisk/KernelSU 模块 · 约 1.7 MB</div>
+        <a href="https://github.com/MineACEx/AndWreBox/releases/download/v1.0.0/Python3Install.zip" class="btn btn-primary" target="_blank" rel="noopener">下载 <span class="dl-arrow">↓</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="dl-source">
+    <span class="download-icon">📂</span>
+    <h3>源代码</h3>
+    <div class="file-info">GitHub Repository · MIT License</div>
+    <a href="https://github.com/MineACEx/AndWreBox" class="btn btn-secondary" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</section>
+
+<!-- Changelog -->
+<section class="section" id="changelog" style="display:none;">
+  <h2 class="section-title" data-i18n="changelog_title">📝 更新日志</h2>
+  <p class="section-desc" data-i18n="changelog_desc">每一次迭代都值得被记录</p>
+  <div class="changelog-list">
+    <div class="changelog-version">v1.0.0 — 2026.06.18</div>
+    <div class="changelog-item"><strong>首发正式版：</strong>经过 3 个 Beta 版本迭代，15 个功能模块全部稳定发布，双语言 UI 全覆盖，支持 Termux 和 Python3 模块两种运行方式。</div>
+    <div class="changelog-item"><strong>新增：</strong>系统微调模块 — CPU 调度 / GPU 频率 / I/O 调度器，一键性能模式、省电模式、游戏模式预设。</div>
+    <div class="changelog-item"><strong>新增：</strong>温控调节模块 — 自定义温控阈值，逐场景配置（充电/游戏/日常），安全区间保护。</div>
+    <div class="changelog-item"><strong>新增：</strong>AnyKernel3 内核刷写模块 — 答题验证系统，10 题随机抽取 3 题，通过后解锁刷写界面，自动备份 boot.img。</div>
+    <div class="changelog-item"><strong>新增：</strong>Magisk 模块构建器 — 一键生成改机型模块，36 款预设热门机型，支持自定义模块信息。</div>
+    <div class="changelog-item"><strong>新增：</strong>电池健康监测 — 实时读取循环次数、健康度、温度，充电上限设置，寿命延长。</div>
+    <div class="changelog-item"><strong>新增：</strong>GPU 优化 — Adreno 全系列，频率锁定/降压/超频，渲染帧率控制。</div>
+    <div class="changelog-item"><strong>新增：</strong>网络优化 — TCP 拥塞算法 / DNS / MTU 参数调整，降低游戏延迟。</div>
+    <div class="changelog-item"><strong>新增：</strong>显示调节 — DPI / 分辨率 / 刷新率 / 色温，HDR 强制开启。</div>
+    <div class="changelog-item"><strong>新增：</strong>ZRAM / SWAP 管理 — 大小和压缩算法（lz4/zstd），优化内存使用。</div>
+    <div class="changelog-item"><strong>新增：</strong>熵池增强 — 增大随机数熵池，提升系统响应和加解密速度。</div>
+    <div class="changelog-item"><strong>新增：</strong>Prop 编辑器 — 可视化编辑 build.prop，内置常用优化预设。</div>
+    <div class="changelog-item"><strong>新增：</strong>实时监控 — CPU/GPU 频率/温度/FPS/功耗，悬浮窗模式。</div>
+    <div class="changelog-item"><strong>新增：</strong>文件加密 — AES-256 加密，密码/图案解锁，加密后自动隐藏。</div>
+    <div class="changelog-item"><strong>新增：</strong>应用管理 — 批量冻结/解冻系统应用，组件管理，导出列表。</div>
+    <div class="changelog-item"><strong>新增：</strong>备份还原 — 系统分区/应用数据/内核镜像备份，TWRP 兼容。</div>
+    <div class="changelog-item"><strong>新增：</strong>Python3Install 模块 — 系统级 Python3 安装，无需 Termux 即可运行。</div>
+    <div class="changelog-item"><strong>新增：</strong>run.sh 通用启动器 — 兼容 4 种 Python 安装方式，自动检测环境。</div>
+    <div class="changelog-item"><strong>新增：</strong>750+ 条中英双语翻译，覆盖全部模块和界面。</div>
+    <div class="changelog-item"><strong>新增：</strong>雪花 Logo 动画、光标控制、30fps 连贯动画系统。</div>
+    <div class="changelog-item"><strong>优化：</strong>高通骁龙平台深度优化，Snapdragon 8 Elite / Gen5 / Gen4 / Gen3 全系支持。</div>
+    <div class="changelog-item"><strong>优化：</strong>Magisk 模块结构修正，兼容 system/bin 挂载路径。</div>
+    <div class="changelog-item"><strong>优化：</strong>设置页面支持免答题开关、加密密码管理、多语言切换。</div>
+    <div class="changelog-item"><strong>修复：</strong>Rich MarkupError 乱码问题，控制台输出正常显示。</div>
+    <div class="changelog-item"><strong>修复：</strong>菜单对齐、动画帧率异常、机型列表显示不全等问题。</div>
+    <div class="changelog-item"><strong>修复：</strong>Termux 光标干扰、雪花 Logo 排列错位、多宽度字符渲染。</div>
+  </div>
+</section>
+
+<!-- About -->
+<section class="section" id="about" style="display:none;">
+  <h2 class="section-title" data-i18n="about_title">ℹ️ 关于</h2>
+  <p class="section-desc" data-i18n="about_desc">了解 AndWreBox 的更多信息</p>
+  <div class="about-grid">
+    <div class="about-card">
+      
+      <span class="about-card-icon">🎯</span>
+      <div class="about-card-title" data-i18n="about_mission_title">项目使命</div>
+      <p data-i18n="about_mission_desc">为 Android Root 用户提供一站式设备优化解决方案，让每一台设备都能发挥极致性能。</p>
+    </div>
+    <div class="about-card">
+      
+      <span class="about-card-icon">🛠️</span>
+      <div class="about-card-title" data-i18n="about_tech_title">技术栈</div>
+      <p data-i18n="about_tech_desc">Python 3.10+ / Rich TUI / Shell 脚本 / Magisk 模板 / AnyKernel3 / SQLite 加密</p>
+    </div>
+    <div class="about-card">
+      
+      <span class="about-card-icon">📜</span>
+      <div class="about-card-title" data-i18n="about_license_title">开源协议</div>
+      <p data-i18n="about_license_desc">MIT License — 完全开源，自由使用、修改和分发。欢迎贡献代码和提出建议。</p>
+    </div>
+  </div>
+  <table class="about-table">
+    <tr><td data-i18n="about_version">版本</td><td>v1.0.0</td></tr>
+    <tr><td data-i18n="about_platform">平台</td><td>Android (Root) — Magisk / KernelSU / APatch</td></tr>
+    <tr><td data-i18n="about_soc">芯片</td><td>Qualcomm Snapdragon 全系列</td></tr>
+    <tr><td data-i18n="about_modules">模块</td><td>15 个功能模块 + 36 个机型模板</td></tr>
+    <tr><td data-i18n="about_langs">语言</td><td>中文 / English (750+ 双语词条)</td></tr>
+    <tr><td data-i18n="about_author">作者</td><td>MineACEx/Himer</td></tr>
+  </table>
+</section>
+
+<!-- Settings -->
+<section class="section" id="settings" style="display:none;">
+  <h2 class="section-title" data-i18n="settings_title">⚙️ 设置</h2>
+  <p class="section-desc" data-i18n="settings_desc">自定义你的 AndWreBox 体验</p>
+  <div class="settings-grid">
+    <div class="setting-card">
+      <h3 data-i18n="set_theme">🎨 主题模式</h3>
+      <div class="setting-row">
+        <span data-i18n="set_dark">深色模式</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="themeToggle" checked onchange="toggleTheme()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="setting-card">
+      <h3 data-i18n="set_lang">🌐 语言 / Language</h3>
+      <div class="setting-row">
+        <span data-i18n="set_lang_desc">中文 / English</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="langToggle" onchange="toggleLang()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="setting-card">
+      <h3 data-i18n="set_accent">🎨 主题色</h3>
+      <div class="color-swatches">
+        <div class="color-swatch active" style="background:#6c5ce7;" data-accent="6c5ce7" data-accent2="a29bfe" data-accent3="fd79a8" onclick="setAccent(this)"></div>
+        <div class="color-swatch" style="background:#00b894;" data-accent="00b894" data-accent2="55efc4" data-accent3="fab1a0" onclick="setAccent(this)"></div>
+        <div class="color-swatch" style="background:#0984e3;" data-accent="0984e3" data-accent2="74b9ff" data-accent3="fdcb6e" onclick="setAccent(this)"></div>
+        <div class="color-swatch" style="background:#e17055;" data-accent="e17055" data-accent2="fab1a0" data-accent3="74b9ff" onclick="setAccent(this)"></div>
+        <div class="color-swatch" style="background:#e84393;" data-accent="e84393" data-accent2="fd79a8" data-accent3="a29bfe" onclick="setAccent(this)"></div>
+        <div class="color-swatch" style="background:#00cec9;" data-accent="00cec9" data-accent2="81ecec" data-accent3="dfe6e9" onclick="setAccent(this)"></div>
+      </div>
+    </div>
+    <div class="setting-card">
+      <h3 data-i18n="set_corner">📐 圆角大小</h3>
+      <div class="corner-tiers">
+        <button class="corner-tier" data-tier="0" onclick="setCorner('0')" data-i18n="corner_small">小</button>
+        <button class="corner-tier active" data-tier="1" onclick="setCorner('1')" data-i18n="corner_medium">中</button>
+        <button class="corner-tier" data-tier="2" onclick="setCorner('2')" data-i18n="corner_large">大</button>
+      </div>
+    </div>
+    <div class="setting-card">
+      <h3 data-i18n="set_glass">🔍 玻璃透明度</h3>
+      <input type="range" class="range-slider" min="10" max="90" value="35" id="glassSlider" oninput="setGlassOpacity(this.value)" onchange="setGlassOpacity(this.value)">
+    </div>
+    <div class="setting-card">
+      <h3 data-i18n="set_anim">🎬 动画等级</h3>
+      <div class="corner-tiers">
+        <button class="corner-tier active" data-level="high" onclick="setAnimLevel('high')" data-i18n="anim_high">高 — 全部特效</button>
+        <button class="corner-tier" data-level="mid" onclick="setAnimLevel('mid')" data-i18n="anim_mid">中 — 适度动画</button>
+        <button class="corner-tier" data-level="low" onclick="setAnimLevel('low')" data-i18n="anim_low">低 — 仅必要</button>
+      </div>
+    </div>
+    <div class="setting-card">
+      <h3 data-i18n="set_config">💾 配置管理</h3>
+      <div class="config-actions">
+        <button class="config-btn" onclick="saveConfig()" data-i18n="set_save_file">💾 保存到文件</button>
+        <button class="config-btn" onclick="document.getElementById('configUpload').click()" data-i18n="set_load_file">📂 加载配置</button>
+        <input type="file" id="configUpload" accept=".json" style="display:none;" onchange="loadConfigFile(this)">
+      </div>
+      <div class="config-status" id="configStatus"></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <p data-i18n="footer_tagline">让每一台 Android 设备发挥极致性能</p>
+  <p>AndWreBox v1.0.0 · MIT License · © 2026 MimeACEx</p>
+  <div class="perm-notice" data-i18n="perm_notice">⚠️ 为获得完整体验，请允许浏览器访问本地存储权限</div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// i18N Dictionary
+// ═══════════════════════════════════════════════════════════
+var i18n = {
+  zh: {
+    hero_badge:'🔧 安卓扳手盒子', hero_title:'AndWreBox', hero_subtitle:'专为 Android Root 用户打造的全能工具箱<br>15大模块，一键优化你的设备',
+    hero_dl:'⬇️ 立即下载', hero_learn:'📖 了解更多',
+    tab_features:'⚡ 功能特性', tab_install:'📦 安装教程', tab_downloads:'⬇️ 下载页面', tab_changelog:'📝 更新日志', tab_about:'ℹ️ 关于', tab_settings:'⚙️ 设置',
+    features_title:'⚡ 功能特性', features_desc:'15 大模块，覆盖 Android Root 工具全场景',
+    feat_1_title:'系统微调', feat_1_desc:'调整 CPU 调度、GPU 频率、I/O 调度器。支持一键性能模式、省电模式、游戏模式预设。',
+    feat_2_title:'温控调节', feat_2_desc:'自定义温控阈值，解除温控限制。支持逐场景配置（充电/游戏/日常），安全区间保护。',
+    feat_3_title:'AnyKernel3 刷写', feat_3_desc:'内置答题验证系统，通过后解锁刷写界面。支持自动备份 boot.img，安全刷入自定义内核。',
+    feat_4_title:'Magisk 模块构建', feat_4_desc:'一键生成改机型模块，预设 36 款热门机型。支持自定义模块名称、版本号、作者信息。',
+    feat_5_title:'电池健康监测', feat_5_desc:'实时读取电池循环次数、健康度、温度。支持充电上限设置，延长电池寿命。',
+    feat_6_title:'GPU 优化', feat_6_desc:'调整 GPU 最低/最高频率，锁定渲染帧率。支持 Adreno 全系列，含降压超频选项。',
+    feat_7_title:'网络优化', feat_7_desc:'调整 TCP 拥塞算法、DNS 配置、MTU 参数。降低游戏延迟，提升下载速度。',
+    feat_8_title:'显示调节', feat_8_desc:'调整 DPI、分辨率、刷新率、色温。支持自定义分辨率和 HDR 强制开启。',
+    feat_9_title:'ZRAM / SWAP 管理', feat_9_desc:'调整 ZRAM 大小和压缩算法（lz4/zstd）。优化内存使用，减少杀后台概率。',
+    feat_10_title:'熵池增强', feat_10_desc:'增大随机数熵池，提升系统响应速度和随机性。对加解密操作有明显加速效果。',
+    feat_11_title:'Prop 编辑器', feat_11_desc:'可视化编辑 build.prop 和系统属性。内置常用优化项预设，一键恢复默认值。',
+    feat_12_title:'实时监控', feat_12_desc:'显示 CPU/GPU 频率、温度、帧率、电池功耗。悬浮窗模式，游戏中实时查看。',
+    feat_13_title:'文件加密', feat_13_desc:'AES-256 加密任意文件/文件夹。支持密码和解锁图案两种方式，加密后自动隐藏。',
+    feat_14_title:'应用管理', feat_14_desc:'批量冻结/解冻系统应用，禁用/启用组件。支持导出应用列表，一键恢复预设配置。',
+    feat_15_title:'备份还原', feat_15_desc:'备份和还原系统分区、应用数据、内核镜像。支持 TWRP / Orangefox 兼容格式。',
+    install_title:'📦 安装教程', install_desc:'两种方式，任选其一',
+    install_termux_title:'方式一：Termux 安装', install_termux_desc:'适用于已安装 Termux 的用户',
+    install_module_title:'方式二：Python3 模块安装', install_module_desc:'刷入模块后无需 Termux 即可运行',
+    install_step1_title:'下载并解压', install_step1_desc:'从下载页面获取最新版本，将 AndWreBox 文件夹解压到 /sdcard/AndWreBox/',
+    install_step2_title:'安装 Python 环境', install_step2_desc:'选择上述方式一或方式二安装 Python 运行环境',
+    install_step3_title:'运行脚本', install_step3_desc:'进入 AndWreBox 目录，执行 python main.py（或 python3 main.py），根据菜单选择功能',
+    downloads_title:'⬇️ 下载页面', downloads_desc:'选择你需要的版本',
+    dl_cn_title:'国内用户首选', dl_cn_sub:'CatMak 加速镜像 · 高速下载',
+    dl_intl_title:'国外用户首选', dl_intl_sub:'GitHub Releases · 直连下载',
+    dl_main_info:'主程序包 · arm64 · 约 135 KB', dl_py_info:'Magisk/KernelSU 模块 · 约 1.7 MB',
+    changelog_title:'📝 更新日志', changelog_desc:'每一次迭代都值得被记录',
+    about_title:'ℹ️ 关于', about_desc:'了解 AndWreBox 的更多信息',
+    about_mission_title:'项目使命', about_mission_desc:'为 Android Root 用户提供一站式设备优化解决方案，让每一台设备都能发挥极致性能。',
+    about_tech_title:'技术栈', about_tech_desc:'Python 3.10+ / Rich TUI / Shell 脚本 / Magisk 模板 / AnyKernel3 / SQLite 加密',
+    about_license_title:'开源协议', about_license_desc:'MIT License — 完全开源，自由使用、修改和分发。欢迎贡献代码和提出建议。',
+    about_version:'版本', about_platform:'平台', about_soc:'芯片', about_modules:'模块', about_langs:'语言', about_author:'作者',
+    settings_title:'⚙️ 设置', settings_desc:'自定义你的 AndWreBox 体验',
+    set_theme:'🎨 主题模式', set_dark:'深色模式', set_lang:'🌐 语言 / Language', set_lang_desc:'中文 / English',
+    set_accent:'🎨 主题色', set_corner:'📐 圆角大小', set_glass:'🔍 玻璃透明度',
+    set_anim:'🎬 动画等级', anim_high:'高 — 全部特效', anim_mid:'中 — 适度动画', anim_low:'低 — 仅必要',
+    corner_small:'小', corner_medium:'中', corner_large:'大',
+    set_config:'💾 配置管理', set_save_file:'💾 保存配置到文件', set_load_file:'📂 从文件加载配置',
+    set_click_dl:'⬇️ 点击此处下载配置文件',
+    footer_tagline:'让每一台 Android 设备发挥极致性能',
+    perm_notice:'⚠️ 为获得完整体验，请允许浏览器访问本地存储权限'
+  },
+  en: {
+    hero_badge:'🔧 Android Wrench Box', hero_title:'AndWreBox', hero_subtitle:'All-in-one toolbox for Android Root users<br>15 modules, optimize your device in one tap',
+    hero_dl:'⬇️ Download Now', hero_learn:'📖 Learn More',
+    tab_features:'⚡ Features', tab_install:'📦 Install', tab_downloads:'⬇️ Downloads', tab_changelog:'📝 Changelog', tab_about:'ℹ️ About', tab_settings:'⚙️ Settings',
+    features_title:'⚡ Features', features_desc:'15 modules covering every Android root scenario',
+    feat_1_title:'System Tweaks', feat_1_desc:'Adjust CPU scheduler, GPU frequency, I/O scheduler. One-tap performance, battery saver, and gaming presets.',
+    feat_2_title:'Thermal Control', feat_2_desc:'Custom thermal thresholds, remove thermal throttling. Per-scenario profiles (charging/gaming/daily) with safe zone protection.',
+    feat_3_title:'AnyKernel3 Flasher', feat_3_desc:'Built-in quiz verification system, unlock after passing. Auto backup boot.img, safely flash custom kernels.',
+    feat_4_title:'Magisk Module Builder', feat_4_desc:'One-click device spoofing module generator with 36 popular device templates. Custom name, version, and author info.',
+    feat_5_title:'Battery Health', feat_5_desc:'Real-time battery cycle count, health, temperature. Charge limit control to extend battery lifespan.',
+    feat_6_title:'GPU Optimization', feat_6_desc:'Adjust GPU min/max frequency, lock render FPS. Full Adreno series support with undervolt & overclock options.',
+    feat_7_title:'Network Tuning', feat_7_desc:'Adjust TCP congestion algorithm, DNS config, MTU. Lower game latency, boost download speed.',
+    feat_8_title:'Display Tuning', feat_8_desc:'Adjust DPI, resolution, refresh rate, color temperature. Custom resolution and forced HDR.',
+    feat_9_title:'ZRAM / SWAP Manager', feat_9_desc:'Adjust ZRAM size and compression (lz4/zstd). Optimize memory usage, reduce app kills.',
+    feat_10_title:'Entropy Booster', feat_10_desc:'Increase random entropy pool for better system responsiveness. Significant crypto acceleration.',
+    feat_11_title:'Prop Editor', feat_11_desc:'Visual build.prop and system property editor. Built-in optimization presets, one-click restore.',
+    feat_12_title:'Live Monitor', feat_12_desc:'Real-time CPU/GPU frequency, temperature, FPS, power draw. Floating window mode for in-game monitoring.',
+    feat_13_title:'File Encryption', feat_13_desc:'AES-256 encrypt any file/folder. Password and pattern unlock methods, auto-hide after encryption.',
+    feat_14_title:'App Manager', feat_14_desc:'Batch freeze/unfreeze system apps, disable/enable components. Export app list, one-click restore presets.',
+    feat_15_title:'Backup & Restore', feat_15_desc:'Backup and restore system partitions, app data, kernel images. TWRP / Orangefox compatible format.',
+    install_title:'📦 Installation', install_desc:'Two methods, choose one',
+    install_termux_title:'Method A: Termux', install_termux_desc:'For users who already have Termux installed',
+    install_module_title:'Method B: Python3 Module', install_module_desc:'Flash the module and run without Termux',
+    install_step1_title:'Download & Extract', install_step1_desc:'Get the latest version from Downloads, extract to /sdcard/AndWreBox/',
+    install_step2_title:'Install Python', install_step2_desc:'Choose Method A or B above to install the Python runtime',
+    install_step3_title:'Run', install_step3_desc:'Enter AndWreBox directory, run python main.py (or python3 main.py), select from menu',
+    downloads_title:'⬇️ Downloads', downloads_desc:'Choose your version',
+    dl_cn_title:'China Mirror', dl_cn_sub:'CatMak CDN · High-speed download',
+    dl_intl_title:'International', dl_intl_sub:'GitHub Releases · Direct download',
+    dl_main_info:'Main package · arm64 · ~135 KB', dl_py_info:'Magisk/KernelSU module · ~1.7 MB',
+    changelog_title:'📝 Changelog', changelog_desc:'Every iteration deserves to be recorded',
+    about_title:'ℹ️ About', about_desc:'Learn more about AndWreBox',
+    about_mission_title:'Mission', about_mission_desc:'Provide a one-stop device optimization solution for Android root users, unleashing every device to its peak performance.',
+    about_tech_title:'Tech Stack', about_tech_desc:'Python 3.10+ / Rich TUI / Shell Scripts / Magisk Template / AnyKernel3 / SQLite Encryption',
+    about_license_title:'License', about_license_desc:'MIT License — fully open source, free to use, modify and distribute. Contributions and suggestions welcome.',
+    about_version:'Version', about_platform:'Platform', about_soc:'SoC', about_modules:'Modules', about_langs:'Languages', about_author:'Author',
+    settings_title:'⚙️ Settings', settings_desc:'Customize your AndWreBox experience',
+    set_theme:'🎨 Theme', set_dark:'Dark Mode', set_lang:'🌐 Language', set_lang_desc:'中文 / English',
+    set_accent:'🎨 Accent Color', set_corner:'📐 Corner Radius', set_glass:'🔍 Glass Opacity',
+    set_anim:'🎬 Animation Level', anim_high:'High — Full effects', anim_mid:'Medium — Moderate', anim_low:'Low — Minimal',
+    corner_small:'Small', corner_medium:'Medium', corner_large:'Large',
+    set_config:'💾 Config', set_save_file:'💾 Save Config to File', set_load_file:'📂 Load Config from File',
+    set_click_dl:'⬇️ Click here to download config file',
+    footer_tagline:'Unleash every Android device to its peak performance',
+    perm_notice:'⚠️ For the best experience, please grant local storage access permission'
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
+var CONFIG = {
+  theme: 'dark', lang: 'zh', accentH: 250, accentS: 70, accentL: 55,
+  accent2H: 250, accent2S: 80, accent2L: 70,
+  glassOpacity: 35, cornerTier: '1', animLevel: 'high'
+};
+
+function loadConfig() {
+  try {
+    var saved = localStorage.getItem('andwrebox-config');
+    if (saved) { var c = JSON.parse(saved); Object.assign(CONFIG, c); }
+  } catch(e) {}
+}
+loadConfig();
+
+function saveConfigToStorage() {
+  try { localStorage.setItem('andwrebox-config', JSON.stringify(CONFIG)); } catch(e) {}
+}
+
+function applyFullConfig() {
+  // Theme
+  document.documentElement.setAttribute('data-theme', CONFIG.theme);
+  document.getElementById('themeToggle').checked = CONFIG.theme === 'dark';
+  // Lang
+  document.getElementById('langToggle').checked = CONFIG.lang === 'en';
+  applyI18n(CONFIG.lang);
+  // Accent
+  applyAccent(CONFIG.accentH, CONFIG.accentS, CONFIG.accentL, CONFIG.accent2H, CONFIG.accent2S, CONFIG.accent2L);
+  // Glass
+  setGlassOpacity(CONFIG.glassOpacity);
+  // Corner
+  setCornerTier(CONFIG.cornerTier);
+  // Anim Level
+  document.documentElement.setAttribute('data-anim', CONFIG.animLevel || 'high');
+  var animBtns = document.querySelectorAll('.corner-tier[data-level]');
+  animBtns.forEach(function(b) { b.classList.toggle('active', b.dataset.level === (CONFIG.animLevel || 'high')); });
+}
+
+function applyAccent(h, s, l, h2, s2, l2) {
+  var root = document.documentElement.style;
+  root.setProperty('--accent', 'hsl(' + h + ',' + s + '%,' + l + '%)');
+  root.setProperty('--accent2', 'hsl(' + h2 + ',' + s2 + '%,' + l2 + '%)');
+  root.setProperty('--accent-glow', 'hsla(' + h + ',' + s + '%,' + l + '%,0.35)');
+  root.setProperty('--card-hover-glow', '0 0 40px hsla(' + h + ',' + s + '%,' + l + '%,0.25)');
+  CONFIG.accentH = h; CONFIG.accentS = s; CONFIG.accentL = l;
+  CONFIG.accent2H = h2; CONFIG.accent2S = s2; CONFIG.accent2L = l2;
+  saveConfigToStorage();
+}
+
+function setGlassOpacity(val) {
+  var v = parseInt(val) || 55;
+  CONFIG.glassOpacity = v;
+  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.style.setProperty('--glass-bg', isDark ? 'rgba(18,18,26,' + (v/100) + ')' : 'rgba(255,255,255,' + (v/100) + ')');
+  var slider = document.getElementById('glassSlider');
+  if (slider) slider.value = v;
+  saveConfigToStorage();
+}
+
+function setCornerTier(tier) {
+  CONFIG.cornerTier = tier;
+  var radii = { '0': ['8px','5px'], '1': ['18px','12px'], '2': ['32px','20px'] };
+  var r = radii[tier] || radii['1'];
+  document.documentElement.style.setProperty('--radius', r[0]);
+  document.documentElement.style.setProperty('--radius-sm', r[1]);
+  document.querySelectorAll('.corner-tier').forEach(function(b, i) { b.classList.toggle('active', i === parseInt(tier)); });
+  saveConfigToStorage();
+}
+
+function setCorner(tier) { setCornerTier(tier); }
+
+function setAnimLevel(level) {
+  CONFIG.animLevel = level;
+  document.documentElement.setAttribute('data-anim', level);
+  document.querySelectorAll('.corner-tier[data-level]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.level === level);
+  });
+  saveConfigToStorage();
+  // Reload page to apply 3D tilt changes
+  location.reload();
+}
+
+function toggleTheme() {
+  CONFIG.theme = document.getElementById('themeToggle').checked ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', CONFIG.theme);
+  setGlassOpacity(CONFIG.glassOpacity);
+  saveConfigToStorage();
+}
+
+function toggleLang() {
+  CONFIG.lang = document.getElementById('langToggle').checked ? 'en' : 'zh';
+  applyI18n(CONFIG.lang);
+  saveConfigToStorage();
+}
+
+function setAccent(el) {
+  var h = parseInt(el.dataset.accent, 16);
+  var r = (h >> 16) & 0xff, g = (h >> 8) & 0xff, b = h & 0xff;
+  var hsl = rgbToHsl(r, g, b);
+  var h2 = parseInt(el.dataset.accent2, 16);
+  var r2 = (h2 >> 16) & 0xff, g2 = (h2 >> 8) & 0xff, b2 = h2 & 0xff;
+  var hsl2 = rgbToHsl(r2, g2, b2);
+  applyAccent(hsl[0], hsl[1], hsl[2], hsl2[0], hsl2[1], hsl2[2]);
+  document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  var max = Math.max(r, g, b), min = Math.min(r, g, b);
+  var h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    var d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function applyI18n(lang) {
+  var dict = i18n[lang] || i18n.zh;
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    if (dict[key]) el.innerHTML = dict[key];
+  });
+  document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+}
+
+function saveConfig() {
+  var json = JSON.stringify(CONFIG, null, 2);
+  var dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+  var a = document.createElement('a');
+  a.href = dataUri; a.download = 'andwrebox-config.json'; a.style.display = 'none';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  var status = document.getElementById('configStatus');
+  status.innerHTML = '✅ ' + (CONFIG.lang === 'en' ? 'Config exported! If no download popup, ' : '配置已导出！如果没有弹出下载，') + '<a href="' + dataUri + '" download="andwrebox-config.json" style="color:var(--accent);">' + (CONFIG.lang === 'en' ? 'click here' : '点击这里') + '</a>';
+}
+
+function loadConfigFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var c = JSON.parse(e.target.result);
+      Object.assign(CONFIG, c);
+      applyFullConfig();
+      document.getElementById('configStatus').textContent = CONFIG.lang === 'en' ? '✅ Config loaded successfully!' : '✅ 配置加载成功！';
+    } catch(err) {
+      document.getElementById('configStatus').textContent = CONFIG.lang === 'en' ? '❌ Invalid config file' : '❌ 无效的配置文件';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Tab Navigation
+// ═══════════════════════════════════════════════════════════
+(function() {
+  var sections = {
+    features: document.getElementById('features'), install: document.getElementById('install'),
+    downloads: document.getElementById('downloads'), changelog: document.getElementById('changelog'),
+    about: document.getElementById('about'), settings: document.getElementById('settings')
+  };
+  var activeTab = 'features';
+
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var tab = this.dataset.tab;
+      if (tab === activeTab) return;
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      Object.keys(sections).forEach(function(k) { sections[k].style.display = 'none'; });
+      if (sections[tab]) { sections[tab].style.display = 'block'; sections[tab].classList.add('visible'); }
+      activeTab = tab;
+      window.location.hash = tab;
+      setTimeout(function() {
+        window.scrollTo({ top: sections[tab].offsetTop - 80, behavior: 'smooth' });
+      }, 50);
+    });
+  });
+
+  // Hash routing
+  function handleHash() {
+    var tab = window.location.hash.replace('#', '');
+    if (tab && sections[tab] && tab !== activeTab) {
+      var btn = document.querySelector('[data-tab="' + tab + '"]');
+      if (btn) btn.click();
+    }
+  }
+  window.addEventListener('hashchange', handleHash);
+  handleHash();
+})();
+
+// ═══════════════════════════════════════════════════════════
+// StarChain Canvas — ULTIMATE
+// ═══════════════════════════════════════════════════════════
+(function() {
+  var canvas = document.getElementById('starCanvas');
+  var ctx = canvas.getContext('2d');
+  var animLevel = CONFIG.animLevel || 'high';
+  var STAR_COUNT = animLevel === 'low' ? 40 : (animLevel === 'mid' ? 80 : 120);
+  var CONNECTION_DIST = animLevel === 'low' ? 0 : (animLevel === 'mid' ? 120 : 170);
+  var MAX_SPEED = 4;
+  var stars = [], mouseX = -1000, mouseY = -1000, mouseActive = false, lastMoveTime = 0;
+  var pulseWaves = [], meteors = [], burstParticles = [];
+  var trailParticles = [];
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var w, h;
+
+  function resize() {
+    w = window.innerWidth; h = window.innerHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', function() { resize(); initStars(); });
+
+  function initStars() {
+    stars = [];
+    for (var i = 0; i < STAR_COUNT; i++) {
+      var x = Math.random() * w, y = Math.random() * h;
+      stars.push({
+        x: x, y: y, homeX: x, homeY: y,
+        vx: 0, vy: 0, driftAngle: Math.random() * Math.PI * 2,
+        driftSpeed: 0.15 + Math.random() * 0.35,
+        size: 0.6 + Math.random() * 1.8,
+        opacity: 0.3 + Math.random() * 0.7
+      });
+    }
+  }
+  initStars();
+
+  var mouseVX = 0, mouseVY = 0, prevMX = 0, prevMY = 0;
+
+  function onMouseMove(e) {
+    prevMX = mouseX; prevMY = mouseY;
+    mouseX = e.clientX; mouseY = e.clientY;
+    mouseActive = true; lastMoveTime = Date.now();
+    mouseVX = mouseX - prevMX; mouseVY = mouseY - prevMY;
+    var speed = Math.sqrt(mouseVX * mouseVX + mouseVY * mouseVY);
+    if (speed > 3) {
+      pulseWaves.push({ x: mouseX, y: mouseY, radius: 0, life: 1, maxRadius: 80 + Math.random() * 60 });
+    }
+  }
+  function onTouchMove(e) {
+    prevMX = mouseX; prevMY = mouseY;
+    mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY;
+    mouseActive = true; lastMoveTime = Date.now();
+    mouseVX = mouseX - prevMX; mouseVY = mouseY - prevMY;
+    var speed = Math.sqrt(mouseVX * mouseVX + mouseVY * mouseVY);
+    if (speed > 3) {
+      pulseWaves.push({ x: mouseX, y: mouseY, radius: 0, life: 1, maxRadius: 80 + Math.random() * 60 });
+    }
+  }
+  function onMouseLeave() { mouseActive = false; }
+  function onClick(e) {
+    var cx = e.clientX, cy = e.clientY;
+    for (var i = 0; i < 12; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var spd = 1 + Math.random() * 4;
+      burstParticles.push({
+        x: cx, y: cy, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
+        life: 1, decay: 0.015 + Math.random() * 0.03, size: 1 + Math.random() * 2.5
+      });
+    }
+  }
+
+  window.addEventListener('mousemove', onMouseMove, { passive: true });
+  window.addEventListener('touchmove', onTouchMove, { passive: true });
+  window.addEventListener('mouseleave', onMouseLeave);
+  window.addEventListener('click', onClick);
+
+  // Meteor spawner
+  setInterval(function() {
+    if (document.hidden) return;
+    if (Math.random() < 0.4) {
+      meteors.push({
+        x: Math.random() * w, y: -20,
+        vx: (Math.random() - 0.5) * 3, vy: 4 + Math.random() * 6,
+        life: 1, length: 40 + Math.random() * 80
+      });
+    }
+  }, 3000);
+
+  function update() {
+    // Decay mouse
+    if (mouseActive && Date.now() - lastMoveTime > 500) mouseActive = false;
+
+    // Update stars
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      // Drift
+      s.homeX += Math.cos(s.driftAngle) * s.driftSpeed;
+      s.homeY += Math.sin(s.driftAngle) * s.driftSpeed;
+      s.driftAngle += (Math.random() - 0.5) * 0.02;
+
+      // Spring to home
+      s.vx += (s.homeX - s.x) * 0.003;
+      s.vy += (s.homeY - s.y) * 0.003;
+
+      // Magnetic attraction to cursor
+      if (mouseActive) {
+        var dx = mouseX - s.x, dy = mouseY - s.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 350) {
+          var strength = (1 - dist / 350);
+          strength = strength * strength * strength * 0.18;
+          s.vx += dx / dist * strength;
+          s.vy += dy / dist * strength;
+          // Trail on close proximity
+          if (dist < 80 && Math.random() < 0.3) {
+            trailParticles.push({
+              x: s.x, y: s.y, life: 1, decay: 0.04 + Math.random() * 0.06,
+              size: s.size * 0.5
+            });
+          }
+        }
+      }
+
+      // Soft boundary — push away from edges
+      var edgeMargin = 100, edgeStrength = 0.04;
+      if (s.x < edgeMargin) s.vx += (edgeMargin - s.x) / edgeMargin * edgeStrength;
+      if (s.x > w - edgeMargin) s.vx -= (s.x - (w - edgeMargin)) / edgeMargin * edgeStrength;
+      if (s.y < edgeMargin) s.vy += (edgeMargin - s.y) / edgeMargin * edgeStrength;
+      if (s.y > h - edgeMargin) s.vy -= (s.y - (h - edgeMargin)) / edgeMargin * edgeStrength;
+
+      // Hard wrap with home reset
+      var wrapped = false;
+      if (s.x > w + 60) { s.x = -40; s.homeX = s.x; s.homeY = s.y; wrapped = true; }
+      if (s.x < -60) { s.x = w + 40; s.homeX = s.x; s.homeY = s.y; wrapped = true; }
+      if (s.y > h + 60) { s.y = -40; s.homeY = s.y; s.homeX = s.x; wrapped = true; }
+      if (s.y < -60) { s.y = h + 40; s.homeY = s.y; s.homeX = s.x; wrapped = true; }
+      if (wrapped) { s.vx *= 0.15; s.vy *= 0.15; }
+
+      // Clamp speed
+      var spd = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
+      if (spd > MAX_SPEED) { s.vx = s.vx / spd * MAX_SPEED; s.vy = s.vy / spd * MAX_SPEED; }
+
+      s.x += s.vx; s.y += s.vy;
+      s.vx *= 0.96; s.vy *= 0.96;
+    }
+
+    // Update pulse waves
+    for (var i = pulseWaves.length - 1; i >= 0; i--) {
+      var pw = pulseWaves[i];
+      pw.radius += (pw.maxRadius - pw.radius) * 0.15;
+      pw.life -= 0.02;
+      if (pw.life <= 0) pulseWaves.splice(i, 1);
+    }
+
+    // Update meteors
+    for (var i = meteors.length - 1; i >= 0; i--) {
+      var m = meteors[i];
+      m.x += m.vx; m.y += m.vy;
+      m.life -= 0.008;
+      if (m.life <= 0 || m.y > h + 100) meteors.splice(i, 1);
+    }
+
+    // Update burst
+    for (var i = burstParticles.length - 1; i >= 0; i--) {
+      var bp = burstParticles[i];
+      bp.x += bp.vx; bp.y += bp.vy;
+      bp.life -= bp.decay;
+      if (bp.life <= 0) burstParticles.splice(i, 1);
+    }
+
+    // Update trail
+    for (var i = trailParticles.length - 1; i >= 0; i--) {
+      trailParticles[i].life -= trailParticles[i].decay;
+      if (trailParticles[i].life <= 0) trailParticles.splice(i, 1);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw pulse waves
+    for (var i = 0; i < pulseWaves.length; i++) {
+      var pw = pulseWaves[i];
+      ctx.beginPath();
+      ctx.arc(pw.x, pw.y, pw.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(108,92,231,' + (pw.life * 0.2) + ')';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Draw connections — brighter, more visible chains
+    ctx.strokeStyle = 'rgba(108,92,231,0.18)';
+    ctx.lineWidth = 0.6;
+    for (var i = 0; i < stars.length; i++) {
+      for (var j = i + 1; j < stars.length; j++) {
+        var dx = stars[i].x - stars[j].x, dy = stars[i].y - stars[j].y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CONNECTION_DIST) {
+          var alpha = (1 - dist / CONNECTION_DIST) * 0.5;
+          ctx.globalAlpha = alpha;
+          ctx.beginPath(); ctx.moveTo(stars[i].x, stars[i].y); ctx.lineTo(stars[j].x, stars[j].y); ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Draw meteors
+    for (var i = 0; i < meteors.length; i++) {
+      var m = meteors[i];
+      var grad = ctx.createLinearGradient(m.x, m.y, m.x - m.vx * m.length * 0.02, m.y - m.vy * m.length * 0.02);
+      grad.addColorStop(0, 'rgba(255,255,255,' + m.life + ')');
+      grad.addColorStop(1, 'rgba(108,92,231,0)');
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(m.x - m.vx * m.length * 0.02, m.y - m.vy * m.length * 0.02);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Draw burst
+    for (var i = 0; i < burstParticles.length; i++) {
+      var bp = burstParticles[i];
+      ctx.beginPath();
+      ctx.arc(bp.x, bp.y, bp.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(108,92,231,' + bp.life + ')';
+      ctx.fill();
+    }
+
+    // Draw trail
+    for (var i = 0; i < trailParticles.length; i++) {
+      var tp = trailParticles[i];
+      ctx.beginPath();
+      ctx.arc(tp.x, tp.y, tp.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(162,155,254,' + tp.life * 0.5 + ')';
+      ctx.fill();
+    }
+
+    // Draw stars
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + s.opacity + ')';
+      ctx.fill();
+    }
+  }
+
+  var paused = false;
+  document.addEventListener('visibilitychange', function() { paused = document.hidden; });
+
+  function loop() {
+    if (!paused) { update(); draw(); }
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // Scroll link
+  window.addEventListener('scroll', function() {
+    var scrollY = window.scrollY, maxScroll = document.body.scrollHeight - window.innerHeight;
+    var pct = maxScroll > 0 ? scrollY / maxScroll : 0;
+    document.getElementById('scrollProgress').style.width = (pct * 100) + '%';
+  }, { passive: true });
+})();
+
+// ═══════════════════════════════════════════════════════════
+// Cursor Glow
+// ═══════════════════════════════════════════════════════════
+(function() {
+  var glow = document.getElementById('cursorGlow');
+  var active = false;
+  document.addEventListener('mousemove', function(e) {
+    glow.style.left = e.clientX + 'px'; glow.style.top = e.clientY + 'px';
+    if (!active) { glow.classList.add('active'); active = true; }
+  }, { passive: true });
+  document.addEventListener('mouseleave', function() { glow.classList.remove('active'); active = false; });
+})();
+
+// ═══════════════════════════════════════════════════════════
+// 3D Card Tilt — touch + mouse, click spring-back, throttled
+// ═══════════════════════════════════════════════════════════
+(function() {
+  var animLevel = CONFIG.animLevel || 'high';
+  var tiltAmount = animLevel === 'high' ? 14 : (animLevel === 'mid' ? 7 : 0);
+  if (tiltAmount === 0) return;
+
+  var grids = document.querySelectorAll('.feature-grid,.download-section,.about-grid');
+  grids.forEach(function(grid) {
+    grid.style.perspective = '1200px';
+  });
+  var cards = document.querySelectorAll('.feature-card,.download-card,.about-card');
+  var rafId = null, pending = null;
+  var activeCard = null;
+
+  cards.forEach(function(c) {
+    c.style.willChange = 'transform';
+    c.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1), border-color 0.4s, box-shadow 0.4s';
+    c.style.transformStyle = 'preserve-3d';
+  });
+
+  function tiltCard(card, clientX, clientY) {
+    var rect = card.getBoundingClientRect();
+    var x = (clientX - rect.left) / rect.width;
+    var y = (clientY - rect.top) / rect.height;
+    x = Math.max(0, Math.min(1, x));
+    y = Math.max(0, Math.min(1, y));
+    var rx = (y - 0.5) * tiltAmount;
+    var ry = (x - 0.5) * tiltAmount;
+    card.style.transition = 'none';
+    card.style.transform = 'translateY(-5px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+    card.style.borderColor = 'var(--accent)';
+    card.style.boxShadow = '0 0 40px var(--accent-glow), 0 0 90px rgba(108,92,231,0.15)';
+  }
+
+  function resetCard(card) {
+    card.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1), border-color 0.5s, box-shadow 0.5s';
+    card.style.transform = '';
+    card.style.borderColor = '';
+    card.style.boxShadow = '';
+  }
+
+  function resetAll() {
+    cards.forEach(function(c) { resetCard(c); });
+    activeCard = null;
+  }
+
+  cards.forEach(function(card) {
+    card.addEventListener('mousemove', function(e) {
+      pending = { card: card, cx: e.clientX, cy: e.clientY };
+      if (!rafId) {
+        rafId = requestAnimationFrame(function() {
+          if (pending) tiltCard(pending.card, pending.cx, pending.cy);
+          pending = null; rafId = null;
+        });
+      }
+    });
+
+    card.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      pending = { card: card, cx: e.touches[0].clientX, cy: e.touches[0].clientY };
+      if (!rafId) {
+        rafId = requestAnimationFrame(function() {
+          if (pending) tiltCard(pending.card, pending.cx, pending.cy);
+          pending = null; rafId = null;
+        });
+      }
+    }, { passive: false });
+
+    card.addEventListener('touchend', function() { resetCard(card); });
+    card.addEventListener('mouseleave', function() { resetCard(card); });
+
+    card.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var rect = card.getBoundingClientRect();
+      var cx = e.clientX, cy = e.clientY;
+      var x = (cx - rect.left) / rect.width;
+      var y = (cy - rect.top) / rect.height;
+      x = Math.max(0, Math.min(1, x));
+      y = Math.max(0, Math.min(1, y));
+      card.style.transition = 'none';
+      card.style.transform = 'translateY(-5px) rotateX(' + ((y-0.5)*tiltAmount) + 'deg) rotateY(' + ((x-0.5)*tiltAmount) + 'deg)';
+      card.style.borderColor = 'var(--accent)';
+      card.style.boxShadow = '0 0 40px var(--accent-glow), 0 0 90px rgba(108,92,231,0.15)';
+      activeCard = card;
+      setTimeout(function() { resetCard(card); activeCard = null; }, 120);
+    });
+  });
+
+  // Click outside any card resets all
+  document.addEventListener('click', function(e) {
+    var isCard = false;
+    for (var i = 0; i < cards.length; i++) {
+      if (cards[i].contains(e.target)) { isCard = true; break; }
+    }
+    if (!isCard) resetAll();
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════
+// Tab Ripple
+// ═══════════════════════════════════════════════════════════
+(function() {
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      var ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      var rect = btn.getBoundingClientRect();
+      var size = Math.max(rect.width, rect.height);
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      btn.appendChild(ripple);
+      ripple.addEventListener('animationend', function() { ripple.remove(); });
+    });
+  });
+  var style = document.createElement('style');
+  style.textContent = '.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:rippleAnim 0.6s ease-out;pointer-events:none;}@keyframes rippleAnim{to{transform:scale(4);opacity:0;}}';
+  document.head.appendChild(style);
+})();
+
+// ═══════════════════════════════════════════════════════════
+// Staggered animations for changelog items
+// ═══════════════════════════════════════════════════════════
+(function() {
+  var items = document.querySelectorAll('.changelog-item');
+  for (var i = 0; i < items.length; i++) {
+    items[i].style.animationDelay = (i * 0.04) + 's';
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+applyFullConfig();
+
+// Loading
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('mainContent').style.visibility = 'visible';
+  }, 1200);
+});
+</script>
+</body>
+</html>
