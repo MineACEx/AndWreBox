@@ -9,20 +9,20 @@
 :root {
   --bg: #0a0a0f; --bg2: #12121a; --bg3: #1e1e2a; --ink: #f0f0f5;
   --muted: #999; --rule: rgba(255,255,255,0.08);
-  --glass-bg: rgba(18,18,26,0.35); --glass-border: rgba(255,255,255,0.06);
+  --glass-bg: rgba(18,18,26,0.10); --glass-border: rgba(255,255,255,0.06);
   --glass-blur: blur(28px);
-  --accent: #6c5ce7; --accent2: #a29bfe; --accent3: #fd79a8;
-  --accent-glow: rgba(108,92,231,0.35);
-  --card-hover-glow: 0 0 40px rgba(108,92,231,0.25);
-  --radius: 18px; --radius-sm: 12px;
+  --accent: #00cec9; --accent2: #81ecec; --accent3: #dfe6e9;
+  --accent-glow: rgba(0,206,201,0.35);
+  --card-hover-glow: 0 0 40px rgba(0,206,201,0.25);
+  --radius: 32px; --radius-sm: 20px;
   --e-out: cubic-bezier(0.16,1,0.3,1); --e-spring: cubic-bezier(0.34,1.56,0.64,1);
   --e-bounce: cubic-bezier(0.68,-0.55,0.27,1.55);
 }
 [data-theme="light"] {
   --bg: #f5f5f9; --bg2: #eeeef5; --bg3: #dddde8; --ink: #1a1a2e;
   --muted: #666; --rule: rgba(0,0,0,0.06);
-  --glass-bg: rgba(255,255,255,0.35); --glass-border: rgba(0,0,0,0.06);
-  --card-hover-glow: 0 0 40px rgba(108,92,231,0.15);
+  --glass-bg: rgba(255,255,255,0.10); --glass-border: rgba(0,0,0,0.06);
+  --card-hover-glow: 0 0 40px rgba(0,206,201,0.15);
 }
 
 /* ═══════════ Reset ═══════════ */
@@ -810,25 +810,25 @@ main {
     <div class="setting-card">
       <h3 data-i18n="set_accent">🎨 主题色</h3>
       <div class="color-swatches">
-        <div class="color-swatch active" style="background:#6c5ce7;" data-accent="6c5ce7" data-accent2="a29bfe" data-accent3="fd79a8" onclick="setAccent(this)"></div>
+        <div class="color-swatch" style="background:#6c5ce7;" data-accent="6c5ce7" data-accent2="a29bfe" data-accent3="fd79a8" onclick="setAccent(this)"></div>
         <div class="color-swatch" style="background:#00b894;" data-accent="00b894" data-accent2="55efc4" data-accent3="fab1a0" onclick="setAccent(this)"></div>
         <div class="color-swatch" style="background:#0984e3;" data-accent="0984e3" data-accent2="74b9ff" data-accent3="fdcb6e" onclick="setAccent(this)"></div>
         <div class="color-swatch" style="background:#e17055;" data-accent="e17055" data-accent2="fab1a0" data-accent3="74b9ff" onclick="setAccent(this)"></div>
         <div class="color-swatch" style="background:#e84393;" data-accent="e84393" data-accent2="fd79a8" data-accent3="a29bfe" onclick="setAccent(this)"></div>
-        <div class="color-swatch" style="background:#00cec9;" data-accent="00cec9" data-accent2="81ecec" data-accent3="dfe6e9" onclick="setAccent(this)"></div>
+        <div class="color-swatch active" style="background:#00cec9;" data-accent="00cec9" data-accent2="81ecec" data-accent3="dfe6e9" onclick="setAccent(this)"></div>
       </div>
     </div>
     <div class="setting-card">
       <h3 data-i18n="set_corner">📐 圆角大小</h3>
       <div class="corner-tiers">
         <button class="corner-tier" data-tier="0" onclick="setCorner('0')" data-i18n="corner_small">小</button>
-        <button class="corner-tier active" data-tier="1" onclick="setCorner('1')" data-i18n="corner_medium">中</button>
-        <button class="corner-tier" data-tier="2" onclick="setCorner('2')" data-i18n="corner_large">大</button>
+        <button class="corner-tier" data-tier="1" onclick="setCorner('1')" data-i18n="corner_medium">中</button>
+        <button class="corner-tier active" data-tier="2" onclick="setCorner('2')" data-i18n="corner_large">大</button>
       </div>
     </div>
     <div class="setting-card">
       <h3 data-i18n="set_glass">🔍 玻璃透明度</h3>
-      <input type="range" class="range-slider" min="10" max="90" value="35" id="glassSlider" oninput="setGlassOpacity(this.value)" onchange="setGlassOpacity(this.value)">
+      <input type="range" class="range-slider" min="10" max="90" value="10" id="glassSlider" oninput="setGlassOpacity(this.value)" onchange="setGlassOpacity(this.value)">
     </div>
     <div class="setting-card">
       <h3 data-i18n="set_anim">🎬 动画等级</h3>
@@ -962,9 +962,9 @@ var i18n = {
 // CONFIG
 // ═══════════════════════════════════════════════════════════
 var CONFIG = {
-  theme: 'dark', lang: 'zh', accentH: 250, accentS: 70, accentL: 55,
-  accent2H: 250, accent2S: 80, accent2L: 70,
-  glassOpacity: 35, cornerTier: '1', animLevel: 'high'
+  theme: 'dark', lang: 'zh', accentH: 179, accentS: 100, accentL: 40,
+  accent2H: 180, accent2S: 74, accent2L: 72,
+  glassOpacity: 10, cornerTier: '2', animLevel: 'high'
 };
 
 function loadConfig() {
